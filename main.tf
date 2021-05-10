@@ -1,3 +1,5 @@
+# Configuration
+
 terraform {
   required_providers {
     aws = {
@@ -42,9 +44,22 @@ provider "aws" {
 	secret_key = var.aws_secret_key
 }
 
+# Resources
+
+resource "aws_vpc" "back-end" {
+  cidr_block = "10.0.0.0/16"
+}
+
+resource "aws_subnet" "back-end" {
+  vpc_id                  = aws_vpc.back-end.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+}
+
 resource "aws_instance" "back-end" {
 	ami = "ami-0357d42faf6fa582f"
 	instance_type = "t2.micro"
+    subnet_id = aws_subnet.back-end.id
 	
 	tags = {
 		Name = "Bootstrap customer project"
