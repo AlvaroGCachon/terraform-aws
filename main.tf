@@ -8,6 +8,14 @@ variable "aws_secret_key" {
   default = "no_secret_key_value_found"
 }
 
+output "access_key_is" {
+  value = var.aws_access_key
+}
+ 
+output "secret_key_is" {
+  value = var.aws_secret_key
+}
+
 provider "aws" {
 	region = "eu-west-3"
 	access_key = var.aws_access_key
