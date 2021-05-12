@@ -94,6 +94,7 @@ resource "aws_instance" "back-end" {
 	instance_type = "t2.micro"
   subnet_id = aws_subnet.back-end.id
   key_name = "${var.ami_key_pair_name}"
+  security_groups = [aws_security_group.back-end.id]
 	
 	tags = {
 		Name = "Bootstrap customer project"
