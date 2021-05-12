@@ -57,6 +57,8 @@ provider "aws" {
 
 resource "aws_vpc" "back-end" {
   cidr_block = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support = true
 }
 
 resource "aws_subnet" "back-end" {
@@ -88,7 +90,7 @@ resource "aws_security_group" "back-end" {
 }
 
 resource "aws_instance" "back-end" {
-	ami = "ami-0357d42faf6fa582f"
+	ami = "ami-0b3e57ee3b63dd76b"
 	instance_type = "t2.micro"
   subnet_id = aws_subnet.back-end.id
   key_name = "${var.ami_key_pair_name}"
