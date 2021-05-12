@@ -26,6 +26,11 @@ variable "aws_secret_key" {
   default = "no_secret_key_value_found"
 }
 
+variable "ami_key_pair_name" {
+  description = "ec2-key-pair-for-AWS"
+  default = "no_key_pair_value_found"
+}
+
 output "aws_region_is" {
   value = var.aws_region
 }
@@ -36,6 +41,10 @@ output "access_key_is" {
  
 output "secret_key_is" {
   value = var.aws_secret_key
+}
+ 
+output "key_pair_is" {
+  value = var.ami_key_pair_name
 }
 
 provider "aws" {
@@ -56,10 +65,33 @@ resource "aws_subnet" "back-end" {
   map_public_ip_on_launch = true
 }
 
+resource "aws_security_group" "back-end" {
+  name        = "back-end"
+  description = "Security group for back-end"
+  vpc_id      = aws_vpc.back-end.id
+
+  ## External SSH access
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # External internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_instance" "back-end" {
 	ami = "ami-0357d42faf6fa582f"
 	instance_type = "t2.micro"
-    subnet_id = aws_subnet.back-end.id
+  subnet_id = aws_subnet.back-end.id
+  key_name = "${var.ami_key_pair_name}"
 	
 	tags = {
 		Name = "Bootstrap customer project"
