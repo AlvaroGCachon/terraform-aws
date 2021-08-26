@@ -31,6 +31,11 @@ variable "ami_key_pair_name" {
   default = "no_key_pair_value_found"
 }
 
+variable "ami_instance_id" {
+  description = "ami-id-ec2-for-AWS"
+  default = "no_ami_id_value_found"
+}
+
 output "aws_region_is" {
   value = var.aws_region
 }
@@ -47,6 +52,10 @@ output "key_pair_is" {
   value = var.ami_key_pair_name
 }
 
+output "url" {
+  value = "http://${aws_eip.eip.public_ip}/"
+}
+
 provider "aws" {
 	region = var.aws_region 
 	access_key = var.aws_access_key
@@ -55,22 +64,22 @@ provider "aws" {
 
 # Resources
 
-resource "aws_vpc" "back-end" {
+resource "aws_vpc" "nginx" {
   cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support = true
 }
 
-resource "aws_subnet" "back-end" {
-  vpc_id                  = aws_vpc.back-end.id
+resource "aws_subnet" "nginx" {
+  vpc_id                  = aws_vpc.nginx.id
   cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
 }
 
-resource "aws_security_group" "back-end" {
-  name        = "back-end"
-  description = "Security group for back-end"
-  vpc_id      = aws_vpc.back-end.id
+resource "aws_security_group" "allow_ssh" {
+  name        = "allow_ssh"
+  description = "Security group for nginx"
+  vpc_id      = aws_vpc.nginx.id
 
   ## External SSH access
   ingress {
@@ -79,8 +88,27 @@ resource "aws_security_group" "back-end" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
-  # External internet access
+resource "aws_security_group" "allow_http" {
+  name        = "allow_http"
+  description = "Allow http inbound traffic in our nginx instance"
+  vpc_id      = aws_vpc.nginx.id
+
+  ## External SSH access
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "allow_outbound_traffic" {
+  name        = "allow-outbound-traffic"
+  description = "Allow all outbound traffic"
+  vpc_id      = aws_vpc.nginx.id
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -89,31 +117,33 @@ resource "aws_security_group" "back-end" {
   }
 }
 
-resource "aws_instance" "back-end" {
-	ami = "ami-0b3e57ee3b63dd76b"
+resource "aws_instance" "nginx" {
+	ami = var.ami_instance_id
 	instance_type = "t2.micro"
-  subnet_id = aws_subnet.back-end.id
+  subnet_id = aws_subnet.nginx.id
   key_name = "${var.ami_key_pair_name}"
-  security_groups = [aws_security_group.back-end.id]
-	
+  vpc_security_group_ids = [
+    aws_security_group.allow_ssh.id, 
+    aws_security_group.allow_http.id, 
+    aws_security_group.allow_outbound_traffic.id
+    ]
+
 	tags = {
-		Name = "Bootstrap customer project"
+		Name = "HTTP Nginx instance"
 	}
 }
 
-resource "aws_internet_gateway" "back-end-gw" {
-  vpc_id = "${aws_vpc.back-end.id}"
+resource "aws_internet_gateway" "nginx-gw" {
+  vpc_id = "${aws_vpc.nginx.id}"
 }
 
-resource "aws_route_table" "route-table-back-end" {
-  vpc_id = "${aws_vpc.back-end.id}"
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.back-end-gw.id}"
-  }
+resource "aws_route" "internet_access" {
+  route_table_id         = aws_vpc.nginx.main_route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.nginx-gw.id
 }
 
-resource "aws_route_table_association" "subnet-association" {
-  subnet_id      = "${aws_subnet.back-end.id}"
-  route_table_id = "${aws_route_table.route-table-back-end.id}"
+resource "aws_eip" "eip" {
+  instance = aws_instance.nginx.id
+  vpc = true
 }
