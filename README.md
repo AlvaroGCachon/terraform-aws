@@ -31,21 +31,22 @@ This repository holds a Terraform script to easily provision an NGINX instance i
 
 The template will generate the following resources:
 
-graph TD
-    A[Elastic IP]
-    B[EC2 Instance]
-    C(AMI)
-    D[VPC]
-    E[SUBNET]
+```mermaid
+graph TD;
+    A[Elastic IP];
+    B[EC2 Instance];
+    C(AMI);
+    D[VPC];
+    E[SUBNET];
+    S1{{ Security Group: Allow HTTP }};
+    S2{{ Security Group: Allow SSH }};
+    S3{{ Security Group: Allow allow_outbound_traffic }};
+    A ==> B;
+    C-. AMI ID .-> B;
+    S1 --> D;
+    S2 --> D;
+    S3 --> D;
+    D --> B;
+    E --> B;
+```
 
-    S1{{ Security Group: Allow HTTP }}
-    S2{{ Security Group: Allow SSH }}
-    S3{{ Security Group: Allow allow_outbound_traffic }}
-
-    A ==> B
-    C-. AMI ID .-> B
-    S1 --> D
-    S2 --> D
-    S3 --> D
-    D --> B
-    E --> B
